@@ -57,7 +57,7 @@ graph TD
     subgraph "Core Services"
         AI[AI Detection Service]
         TTS[TTS Audio Service]
-        BLE[BLE Connection Service]
+        WIFI[WIFI Connection Service]
         NLP[NLP Translation Service]
     end
 
@@ -68,8 +68,8 @@ graph TD
 
     UI <--> Providers
     Providers <--> Services
-    Services --- AI & TTS & BLE & NLP
-    BLE <--> Glasses
+    Services --- AI & TTS & WIFI & NLP
+    WIFI <--> Glasses
     AI <--> TFLite
 ```
 
