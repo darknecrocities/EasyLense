@@ -44,6 +44,52 @@ EasyLens utilizes a decoupled service-layer architecture to ensure scalability a
 
 ---
 
+## 🧠 Object Detection Framework
+
+EasyLens utilizes a high-precision, two-stage object detection architecture optimized for real-time inference on power-constrained wearable devices.
+
+### 🛠️ Architecture Overview
+The detection pipeline is designed to balance accuracy and latency, ensuring safe navigation in dynamic environments like busy streets or uneven terrain.
+
+```mermaid
+graph LR
+    Input[Camera Input] --> Feature[MobileNet Backbone]
+    Feature --> RPN[Region Proposal Network]
+    RPN --> ROI[RoI Pooling]
+    ROI --> Head[Classification & Reg Head]
+    Head --> NMS[Non-Maximum Suppression]
+    NMS --> Output[Audio/Tactile Feedback]
+```
+
+### 🛰️ Core Components
+
+#### 1. MobileNet Backbone
+The system employs **MobileNet** for feature extraction. MobileNet factorizes standard convolutions into **depthwise separable convolutions** to significantly reduce computational overhead.
+
+*   **Standard Convolution:** $D_k \times D_k \times M \times N$
+*   **MobileNet Factorization:** $Depthwise + Pointwise\ Convolution$
+*   **Efficiency:** Reduces parameters and FLOPS by ~8-9x compared to standard CNNs.
+*   **Latency:** Optimized for edge hardware (Snapdragon/Apple Silicon/ARM).
+
+#### 2. Region Proposal Network (RPN)
+To ensure hazards like stairs, open canals, and small obstacles are not missed, a dedicated RPN generates candidate bounding boxes.
+*   **Anchor Boxes:** Evaluates multiple aspect ratios and scales at each spatial location.
+*   **Loss Function:** Optimized using a balanced approach: $L = L_{cls} + \lambda L_{reg}$
+
+#### 3. INT8 Quantization
+The model is converted from **FP32 (32-bit floating point)** to **INT8 (8-bit integer)** using Post-Training Quantization (PTQ).
+
+$$FP32\ Weights \rightarrow INT8\ Representation$$
+
+*   **4x Smaller:** Significantly reduces the deployment footprint.
+*   **3x Faster:** Accelerates inference on mobile NPUs and DSPs.
+*   **Power Efficient:** Extends battery life for wearable usage.
+
+### 🎯 Training Strategy
+The framework is fine-tuned using **Transfer Learning** on a curated hazard dataset, featuring data augmentation for motion blur, low-light simulation, and urban clutter.
+
+---
+
 ## 📊 Technical Diagrams
 
 ### 🗺️ System Architecture
