@@ -110,12 +110,19 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       backgroundColor: Colors.white, // Setting to white as requested for login
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: constraints.maxHeight,
+                ),
+                child: IntrinsicHeight(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
                 // Top App bar section
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -337,7 +344,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 
-                const SizedBox(height: 48),
+                const Spacer(),
 
                 // Don't have an account
                 Row(
@@ -370,6 +377,10 @@ class _LoginScreenState extends State<LoginScreen> {
               ],
             ),
           ),
+                ),
+              ),
+            );
+          },
         ),
       ),
     );

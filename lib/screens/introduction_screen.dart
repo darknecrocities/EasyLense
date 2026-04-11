@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:easylense_prototype/screens/login_screen.dart';
+import 'package:easylense_prototype/screens/auth_gateway_screen.dart';
 
 class IntroductionScreen extends StatefulWidget {
   const IntroductionScreen({super.key});
@@ -37,7 +37,7 @@ class _IntroductionScreenState extends State<IntroductionScreen> {
 
   void _skip() {
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      MaterialPageRoute(builder: (_) => const AuthGatewayScreen()),
     );
   }
 
