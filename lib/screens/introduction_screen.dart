@@ -107,11 +107,11 @@ class _IntroductionScreenState extends State<IntroductionScreen> {
                         // Icon image
                         Image.asset(
                           data['icon']!,
-                          width: 150,
-                          height: 150,
+                          width: 250,
+                          height: 250,
                           fit: BoxFit.contain,
                         ),
-                        const SizedBox(height: 60),
+                        const SizedBox(height: 40),
                         
                         // Title
                         Text(
@@ -148,8 +148,8 @@ class _IntroductionScreenState extends State<IntroductionScreen> {
             Padding(
               padding: const EdgeInsets.all(24.0),
               child: SizedBox(
-                width: double.infinity,
-                height: 56,
+                width: 260,
+                height: 46,
                 child: ElevatedButton(
                   onPressed: _nextPage,
                   style: ElevatedButton.styleFrom(

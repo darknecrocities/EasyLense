@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:easylense_prototype/screens/home_screen.dart';
+import 'package:easylense_prototype/screens/introduction_screen.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
@@ -35,10 +35,10 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     // 3. Wait a bit while showing logo
     await Future.delayed(const Duration(seconds: 2));
 
-    // 4. Navigate to home screen
+    // 4. Navigate to introduction screen
     if (mounted) {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
+        MaterialPageRoute(builder: (context) => const IntroductionScreen()),
       );
     }
   }
