@@ -12,6 +12,9 @@ dependencies:
   cupertino_icons: ^1.0.8
   provider: ^6.1.2
   flutter_tts: ^4.2.0
+  flutter_dotenv: ^5.1.0
+  firebase_core: ^2.24.0
+  firebase_auth: ^4.17.6
 
 dev_dependencies:
   flutter_test:
@@ -21,8 +24,11 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+    - .env
     - assets/images/logo/easylens_logo.png
+    - assets/images/logo/secondary_logo.png
     - assets/images/introduction_icons/
+    - assets/icons/auth_icon/service_icons/
 
   fonts:
     - family: HeaderFont
