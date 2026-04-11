@@ -22,9 +22,14 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/logo/easylens_logo.png
+    - assets/images/introduction_icons/
+
   fonts:
     - family: HeaderFont
       fonts:
         - asset: assets/fonts/header_font/AtkinsonHyperlegible-Regular.ttf
         - asset: assets/fonts/header_font/AtkinsonHyperlegible-Bold.ttf
           weight: 700
+    - family: DescriptionFont
+      fonts:
+        - asset: assets/fonts/description_font/AtkinsonHyperlegibleMono-VariableFont_wght.ttf
