@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import 'providers/detection_provider.dart';
 import 'providers/settings_provider.dart';
 import 'theme/app_theme.dart';
-import 'screens/home_screen.dart';
+import 'screens/welcome_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -40,7 +40,7 @@ class EasyLensApp extends StatelessWidget {
         title: 'EasyLens',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.darkTheme,
-        home: const HomeScreen(),
+        home: const WelcomeScreen(),
       ),
     );
   }

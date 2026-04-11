@@ -33,7 +33,7 @@ class AppTheme {
           letterSpacing: 1.2,
         ),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: AppConstants.cardDark,
         elevation: 4,
         shape: RoundedRectangleBorder(
