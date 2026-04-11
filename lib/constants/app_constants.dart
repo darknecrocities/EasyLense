@@ -5,7 +5,7 @@ class AppConstants {
   AppConstants._();
 
   // ── Colours ──────────────────────────────────────────────
-  static const Color primaryBlue = Color(0xFF2196F3);
+  static const Color primaryBlue = Color(0xFF08209A);
   static const Color accentBlue = Color(0xFF64B5F6);
   static const Color darkBackground = Color(0xFF0D1117);
   static const Color surfaceDark = Color(0xFF161B22);
