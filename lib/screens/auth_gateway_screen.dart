@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:easylense_prototype/screens/login_screen.dart';
+import 'package:easylense_prototype/screens/signup_screen.dart';
 
 class AuthGatewayScreen extends StatelessWidget {
   const AuthGatewayScreen({super.key});
@@ -32,7 +33,9 @@ class AuthGatewayScreen extends StatelessWidget {
                 height: 56,
                 child: OutlinedButton(
                   onPressed: () {
-                    // Navigate to sign up screen (to be implemented)
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const SignupScreen()),
+                    );
                   },
                   style: OutlinedButton.styleFrom(
                     shape: RoundedRectangleBorder(

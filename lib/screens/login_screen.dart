@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:easylense_prototype/screens/home_screen.dart';
+import 'package:easylense_prototype/screens/forgot_password_screen.dart';
+import 'package:easylense_prototype/screens/signup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -221,7 +223,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: () {
-                      // Navigate to reset password (to be implemented)
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
+                      );
                     },
                     child: const Text(
                       'Forgot password?',
@@ -360,7 +364,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     TextButton(
                       onPressed: () {
-                        // Navigate to Sign Up (to be implemented)
+                        Navigator.of(context).pushReplacement(
+                          MaterialPageRoute(builder: (_) => const SignupScreen()),
+                        );
                       },
                       child: const Text(
                         'Sign Up',
