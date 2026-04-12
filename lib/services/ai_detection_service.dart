@@ -1,61 +1,33 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:camera/camera.dart';
 import '../models/detected_object.dart';
 import '../constants/app_constants.dart';
 
-/// Simulated local AI inference service.
-///
-/// Returns randomised subsets of common urban objects with risk levels.
-/// Designed to be swapped with a real TensorFlow Lite model later.
+// Conditional platform import:
+// On Web → tflite_inference_stub.dart (pure Dart mock, no FFI)
+// On Android/iOS → tflite_inference_native.dart (real TFLite interpreter)
+import 'tflite_inference_stub.dart'
+    if (dart.library.io) 'tflite_inference_native.dart';
+
+/// Coordinator service that delegates to the correct platform inference engine.
 class AiDetectionService {
-  final _random = Random();
+  static const String mobileNetModelPath = 'assets/models/mobilenet_v2_quantized.tflite';
+  static const String geminiModel        = 'gemini-3.1-flash-lite-preview';
 
-  /// Available object definitions for mock detection.
-  static const List<_MockObjectDef> _objectPool = [
-    _MockObjectDef('Stairs', Icons.stairs, 0.5, 4.0),
-    _MockObjectDef('Vehicle', Icons.directions_car, 1.0, 8.0),
-    _MockObjectDef('Pedestrian', Icons.directions_walk, 0.3, 6.0),
-    _MockObjectDef('Crosswalk', Icons.swap_calls, 1.0, 5.0),
-    _MockObjectDef('Obstacle', Icons.warning_amber_rounded, 0.2, 3.0),
-  ];
+  final _engine = TfliteInferenceService();
 
-  /// Perform a simulated detection scan.
-  ///
-  /// Returns 1-4 random objects with varying distances and risk levels.
-  /// Simulates ~200ms inference latency.
-  Future<List<DetectedObject>> detect() async {
-    // Simulate inference latency
-    await Future.delayed(Duration(milliseconds: 150 + _random.nextInt(100)));
+  Future<void> init() => _engine.init();
 
-    final count = 1 + _random.nextInt(4); // 1 to 4 objects
-    final shuffled = List<_MockObjectDef>.from(_objectPool)..shuffle(_random);
+  Future<List<DetectedObject>> detect({CameraImage? cameraImage}) => _engine.detect(cameraImage: cameraImage);
 
-    return shuffled.take(count).map((def) {
-      final distance =
-          def.minDist + _random.nextDouble() * (def.maxDist - def.minDist);
-      final risk = _riskFromDistance(distance);
-
-      return DetectedObject(
-        name: def.name,
-        distanceMeters: double.parse(distance.toStringAsFixed(1)),
-        riskLevel: risk,
-        icon: def.icon,
-      );
-    }).toList();
+  Future<void> dispose() async {
+    // Both native and stub engines should implement close/cleanup logic if needed.
+    // In our case, the native engine uses .close() on the interpreter.
+    try {
+      if (identical(_engine.runtimeType, TfliteInferenceService)) {
+        (_engine as dynamic).close();
+      }
+    } catch (_) {}
   }
-
-  RiskLevel _riskFromDistance(double distance) {
-    if (distance < 1.5) return RiskLevel.danger;
-    if (distance < 3.5) return RiskLevel.warning;
-    return RiskLevel.safe;
-  }
-}
-
-class _MockObjectDef {
-  final String name;
-  final IconData icon;
-  final double minDist;
-  final double maxDist;
-
-  const _MockObjectDef(this.name, this.icon, this.minDist, this.maxDist);
 }

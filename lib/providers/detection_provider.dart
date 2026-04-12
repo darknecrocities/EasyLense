@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:camera/camera.dart';
 import '../models/detected_object.dart';
 import '../services/ai_detection_service.dart';
 import '../services/tts_service.dart';
@@ -15,14 +16,23 @@ class DetectionProvider extends ChangeNotifier {
   String _lastInstruction = '';
   String _language = 'en';
 
+  // Cumulative metrics
+  int _totalScans = 0;
+  int _totalObjects = 0;
+  int _totalAlerts = 0;
+
   List<DetectedObject> get detections => _detections;
   bool get isScanning => _isScanning;
   String get lastInstruction => _lastInstruction;
   String get language => _language;
+  int get totalScans => _totalScans;
+  int get totalObjects => _totalObjects;
+  int get totalAlerts => _totalAlerts;
 
   /// Initialise TTS on startup.
   Future<void> init() async {
     await ttsService.init();
+    await _aiService.init();
   }
 
   /// Set the language code and update TTS.
@@ -33,17 +43,21 @@ class DetectionProvider extends ChangeNotifier {
   }
 
   /// Perform a single detection scan.
-  Future<void> scanEnvironment() async {
+  Future<void> scanEnvironment({CameraImage? cameraImage}) async {
     _isScanning = true;
     notifyListeners();
 
     try {
-      _detections = await _aiService.detect();
+      _detections = await _aiService.detect(cameraImage: cameraImage);
+      
+      _totalScans += 1;
+      _totalObjects += _detections.length;
+      _totalAlerts += _detections.where((d) => d.riskLevel != RiskLevel.safe).length;
 
-      // Generate and speak the summary
+      // Generate the summary for UI, but don't speak automatically to reduce lag/noise
       final summary = _nlpFormatter.formatSummary(_detections, _language);
       _lastInstruction = summary;
-      await ttsService.speak(summary);
+      // await ttsService.speak(summary); // Disabled on user request to reduce lag
     } catch (e) {
       _detections = [];
       _lastInstruction = 'Scan failed';
@@ -73,6 +87,7 @@ class DetectionProvider extends ChangeNotifier {
 
   @override
   void dispose() {
+    _aiService.dispose();
     ttsService.dispose();
     super.dispose();
   }

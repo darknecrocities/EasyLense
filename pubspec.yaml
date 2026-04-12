@@ -22,6 +22,10 @@ dependencies:
   camera: ^0.10.5+9
   permission_handler: ^11.3.1
   battery_plus: ^6.0.2
+  shared_preferences: ^2.3.2
+  google_generative_ai: ^0.4.6
+  speech_to_text: ^6.6.1
+  tflite_flutter: ^0.12.0
 
 dev_dependencies:
   flutter_test:
@@ -49,7 +53,10 @@ flutter:
     - assets/icons/hamburger-menu-icons/
     - assets/icons/hazards-icons/
     - assets/icons/object-icon/
+    - assets/animation/
     - assets/app_icon_logo.png
+    - assets/models/ssd_mobilenet_v2_quantized.tflite
+    - assets/models/labels.txt
 
   fonts:
     - family: HeaderFont
@@ -60,3 +67,6 @@ flutter:
     - family: DescriptionFont
       fonts:
         - asset: assets/fonts/description_font/AtkinsonHyperlegibleMono-VariableFont_wght.ttf
+
+dependency_overrides:
+  http: ^1.2.0

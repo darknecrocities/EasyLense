@@ -45,5 +45,17 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>EasyLense needs camera access to help you see the environment.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>EasyLense needs microphone access for voice assistance and Gemini commands.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>EasyLense needs speech recognition to understand your voice commands.</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>EasyLense needs Bluetooth to connect to your smart glasses.</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>EasyLense needs Bluetooth to communicate with your hardware.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>EasyLense needs location access for turn-by-turn navigation.</string>
 </dict>
 </plist>

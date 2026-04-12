@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart'; // Added for kDebugMode
 import 'package:provider/provider.dart';
+import 'providers/gemini_provider.dart';
 import 'providers/detection_provider.dart';
 import 'providers/settings_provider.dart';
 import 'services/firebase_service.dart';
@@ -11,6 +13,11 @@ import 'screens/home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Resolve 'LegacyJavaScriptObject' crash on Flutter Web when using large GIFs
+  if (kDebugMode && kIsWeb) {
+    debugInvertOversizedImages = false;
+  }
   
   // Initialize Firebase using .env credentials
   await FirebaseService.initialize();
@@ -46,6 +53,13 @@ class EasyLensApp extends StatelessWidget {
             final p = DetectionProvider();
             p.init();
             return p;
+          },
+        ),
+        ChangeNotifierProvider(
+          create: (_) {
+            final g = GeminiProvider();
+            g.init();
+            return g;
           },
         ),
         ChangeNotifierProvider(create: (_) => SettingsProvider()),

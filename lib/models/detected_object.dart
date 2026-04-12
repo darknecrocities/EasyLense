@@ -9,12 +9,14 @@ class DetectedObject {
   final double distanceMeters;
   final RiskLevel riskLevel;
   final IconData icon;
+  final Rect? boundingBox;
 
   const DetectedObject({
     required this.name,
     required this.distanceMeters,
     required this.riskLevel,
     required this.icon,
+    this.boundingBox,
   });
 
   /// Human-readable risk label.

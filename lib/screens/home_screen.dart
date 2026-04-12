@@ -6,6 +6,10 @@ import '../providers/settings_provider.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/custom_nav_bar.dart';
 import '../widgets/floating_menu.dart';
+import '../widgets/dashboard_walkthrough.dart';
+import '../widgets/scanning_dashboard_view.dart';
+import '../widgets/spotlight_target.dart';
+import '../services/walkthrough_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -20,6 +24,24 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   bool _isPermissionGranted = false;
   bool _isInitializing = true;
   
+  // Walkthrough Keys
+  final GlobalKey _statusKey = GlobalKey();
+  final GlobalKey _batteryKey = GlobalKey();
+  final GlobalKey _menuKey = GlobalKey();
+  final GlobalKey _cameraPlaceholderKey = GlobalKey();
+  final GlobalKey _geminiButtonKey = GlobalKey();
+  final GlobalKey _glassesCardKey = GlobalKey();
+  final GlobalKey _glassesImageKey = GlobalKey(); // New key for specific image targeting
+  final GlobalKey _scanningCardKey = GlobalKey();
+  final GlobalKey _statsRowKey = GlobalKey();
+  final GlobalKey _homeTabKey = GlobalKey();
+  final GlobalKey _navTabKey = GlobalKey();
+  final GlobalKey _devicesTabKey = GlobalKey();
+
+  bool _showWalkthrough = false;
+  int _tutorialStepIndex = 0;
+  bool _isTutorialConnectedMock = false; // Toggles during walkthrough
+
   // Menu Animation
   late AnimationController _menuController;
   late Animation<Offset> _menuAnimation;
@@ -29,6 +51,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   void initState() {
     super.initState();
     _checkPermissions();
+    _checkWalkthrough();
     
     _menuController = AnimationController(
       vsync: this,
@@ -41,6 +64,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       parent: _menuController,
       curve: Curves.easeOutBack,
     ));
+  }
+
+  Future<void> _checkWalkthrough() async {
+    final shouldShow = await WalkthroughService.shouldShowDashboardTutorial();
+    if (mounted) {
+      setState(() {
+        _showWalkthrough = shouldShow;
+      });
+    }
   }
 
   void _toggleMenu() {
@@ -105,9 +137,81 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    final walkthroughSteps = [
+      TutorialStep(
+        title: 'Welcome to Your\nDashboard!',
+        description: 'Think of the Dashboard as your home base. This is the main screen you\'ll use every day to connect with your surroundings and get real-time audio and vibration alerts. Click the arrow for a quick tour of what everything does:',
+        assetPath: 'assets/images/logo/easylens_logo.png',
+      ),
+      TutorialStep(
+        title: 'Side Settings',
+        description: 'Tap those three lines anytime to open your settings, view notifications or profile, where you can adjust your voice alerts, or set up emergency contacts.',
+        targetId: 'app_menu',
+      ),
+      TutorialStep(
+        title: 'Connection Status',
+        description: 'See that dark blue area at the top left? The red dot means your glasses are currently disconnected. If you want to connect them, just tap right there or head over to the Devices tab at the bottom.',
+        targetId: 'app_status',
+      ),
+      TutorialStep(
+        title: 'Backup Camera',
+        description: 'Because your glasses aren\'t connected, EasyLens needs your permission to use your phone\'s camera instead. Just pop into your phone\'s settings to allow access, and this middle area will turn into your live backup scanner!',
+        targetId: 'camera_placeholder',
+      ),
+      TutorialStep(
+        title: 'Dashboard Preview',
+        description: 'This is what you should expect once you successfully connect your smart glasses—your phone screen transforms from a setup menu into your real-time navigation command center!',
+      ),
+      TutorialStep(
+        title: 'Active Connection',
+        description: 'Up at the top, you\'ll notice that the red dot has turned green! "Glasses Connected" lets you know you are actively paired. A battery indicator also appears here now...',
+        targetId: 'app_status',
+      ),
+      TutorialStep(
+        title: 'Glasses Information',
+        description: 'Right below that, you will see your connected "EasyLens Model 1" glasses, confirming exactly which device is currently acting as your "eyes."',
+        targetId: 'glasses_image',
+      ),
+      TutorialStep(
+        title: 'Scanning Environment',
+        description: 'See that animated radar? That means the EasyLens AI is actively "Scanning Environment..." looking for stairs, vehicles, or obstacles in your path. As soon as it spots a hazard, that radar animation will instantly transform to show you exactly what was detected!',
+        targetId: 'scanning_card',
+      ),
+      TutorialStep(
+        title: 'Quick Breakdown',
+        description: 'Below the radar, you get a quick breakdown of your current walk. It logs how many Objects have been identified, total Scans performed, and how many critical Alerts were sent to you.',
+        targetId: 'stats_row',
+      ),
+      TutorialStep(
+        title: 'Intelligent AI Assist',
+        description: 'Just like when you are using your phone live camera feed, you can activate Gemini here too! Tap this button, and your AI assistant will look through your smart glasses to give you a rich, detailed audio description of exactly what is happening in front of you!',
+        targetId: 'gemini_button',
+      ),
+      TutorialStep(
+        title: 'Navigation Assist',
+        description: 'Ready to head out? Tap this to open your map, punch in a destination (like Holy Angel University!), and get friendly, turn-by-turn voice directions.',
+        targetId: 'nav_navigation',
+      ),
+      TutorialStep(
+        title: 'Manage Devices',
+        description: 'Need to check your glasses battery life or reconnect them? Tap this to manage all your hardware settings.',
+        targetId: 'nav_devices',
+      ),
+      TutorialStep(
+        title: "You're All Set!",
+        description: "That's basically everything you need to know. The rest is just you stepping out and navigating with confidence. Connect your glasses, and let's get moving.",
+        assetPath: 'assets/images/logo/secondary_logo.png',
+      ),
+    ];
+
+    Widget mainScaffold = Scaffold(
       backgroundColor: const Color(0xFFF5F5F7),
-      appBar: CustomAppBar(onMenuTap: _toggleMenu),
+      appBar: CustomAppBar(
+        onMenuTap: _toggleMenu,
+        statusKey: _statusKey,
+        batteryKey: _batteryKey,
+        menuKey: _menuKey,
+      ),
       body: Stack(
         children: [
           // Content based on Index
@@ -140,11 +244,32 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             child: CustomNavBar(
               currentIndex: _currentIndex,
               onTap: (index) => setState(() => _currentIndex = index),
+              homeKey: _homeTabKey,
+              navKey: _navTabKey,
+              devicesKey: _devicesTabKey,
             ),
           ),
         ],
       ),
     );
+
+    if (_showWalkthrough) {
+      return DashboardWalkthrough(
+        steps: walkthroughSteps,
+        currentIndex: _tutorialStepIndex,
+        onComplete: () => setState(() => _showWalkthrough = false),
+        onStepChanged: (index) {
+          // Update the index and toggle "connected" mocked UI for steps 4 through 9
+          setState(() {
+            _tutorialStepIndex = index;
+            _isTutorialConnectedMock = (index >= 4 && index <= 9);
+          });
+        },
+        child: mainScaffold,
+      );
+    }
+
+    return mainScaffold;
   }
 
   Widget _buildBodyContent() {
@@ -164,24 +289,47 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     if (_isInitializing) {
       return const Center(child: CircularProgressIndicator(color: Color(0xFF08209A)));
     }
+
+    // Check permissions as the phone camera is the primary/backup 'eyes'
     if (!_isPermissionGranted) {
       return _buildPermissionDeniedCard();
     }
-    return _buildCameraFeed();
+    
+    return _buildMainDashboard();
+  }
+
+  Widget _buildMainDashboard() {
+    final settings = context.watch<SettingsProvider>();
+    final isConnected = _isTutorialConnectedMock || settings.isBleConnected;
+    
+    return ScanningDashboardView(
+      glassesCardKey: _glassesCardKey,
+      glassesImageKey: _glassesImageKey,
+      scanningCardKey: _scanningCardKey,
+      statsRowKey: _statsRowKey,
+      geminiButtonKey: _geminiButtonKey,
+      isConnected: isConnected,
+      cameraFeed: _buildCameraFeed(),
+      cameraController: _cameraController,
+    );
   }
 
   Widget _buildPermissionDeniedCard() {
-    return Center(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 24),
-        padding: const EdgeInsets.all(32),
+    return SpotlightTarget(
+      id: 'camera_placeholder',
+      child: Center(
+        key: _cameraPlaceholderKey,
+        child: Container(
+          width: double.infinity,
+        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+        padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 30),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(30),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 20,
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 30,
               offset: const Offset(0, 10),
             ),
           ],
@@ -189,45 +337,32 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF0F2FF),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Icon(
-                Icons.photo_camera_outlined,
-                size: 100,
-                color: Color(0xFF08209A),
-              ),
+            // Large Blue Camera Icon - Exactly as mocked
+            Image.asset(
+              'assets/icons/object-icon/camera.png',
+              width: 160,
+              height: 160,
+              color: const Color(0xFF08209A),
+              fit: BoxFit.contain,
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 60),
             const Text(
               'Enable camera\npermissions in your\ndevice settings to view\nthe live feed.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontFamily: 'HeaderFont',
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
+                fontWeight: FontWeight.w900,
+                fontSize: 22,
                 color: Colors.black87,
-                height: 1.3,
+                height: 1.2,
               ),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: _checkPermissions,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF08209A),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: const Text('Try Again'),
             ),
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildCameraFeed() {
     if (_cameraController == null || !_cameraController!.value.isInitialized) {
@@ -248,29 +383,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   Colors.transparent,
                   Colors.black.withOpacity(0.3),
                 ],
-              ),
-            ),
-          ),
-        ),
-        Positioned(
-          right: 24,
-          bottom: 150,
-          child: Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: const Color(0xFF08209A),
-              borderRadius: BorderRadius.circular(15),
-              boxShadow: [
-                BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4)),
-              ],
-            ),
-            child: Center(
-              child: ShaderMask(
-                shaderCallback: (bounds) => const LinearGradient(
-                  colors: [Colors.cyanAccent, Colors.purpleAccent, Colors.orangeAccent],
-                ).createShader(bounds),
-                child: const Icon(Icons.auto_awesome, color: Colors.white, size: 30),
               ),
             ),
           ),

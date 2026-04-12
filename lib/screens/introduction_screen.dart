@@ -101,43 +101,55 @@ class _IntroductionScreenState extends State<IntroductionScreen> {
                   final data = _introData[index];
                   return Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 32.0),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // Icon image
-                        Image.asset(
-                          data['icon']!,
-                          width: 250,
-                          height: 250,
-                          fit: BoxFit.contain,
-                        ),
-                        const SizedBox(height: 40),
-                        
-                        // Title
-                        Text(
-                          data['title']!,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontFamily: 'HeaderFont',
-                            fontWeight: FontWeight.bold,
-                            fontSize: 24,
-                            color: Colors.white,
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        return SingleChildScrollView(
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                            child: IntrinsicHeight(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisSize: MainAxisSize.min, // Keep it tight and centered
+                                children: [
+                                  // Icon image
+                                  Image.asset(
+                                    data['icon']!,
+                                    width: 250,
+                                    height: 250,
+                                    fit: BoxFit.contain,
+                                  ),
+                                  const SizedBox(height: 48), // Increased breathing room
+                                  
+                                  // Title
+                                  Text(
+                                    data['title']!,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      fontFamily: 'HeaderFont',
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 26, // Slightly larger for premium feel
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  
+                                  // Description
+                                  Text(
+                                    data['description']!,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      fontFamily: 'DescriptionFont',
+                                      fontSize: 16,
+                                      height: 1.6,
+                                      color: Colors.white70, // Slightly subtler
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 24),
-                        
-                        // Description
-                        Text(
-                          data['description']!,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontFamily: 'DescriptionFont',
-                            fontSize: 16,
-                            height: 1.5,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ],
+                        );
+                      }
                     ),
                   );
                 },
