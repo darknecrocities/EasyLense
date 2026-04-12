@@ -19,12 +19,23 @@ class TfliteInferenceService {
 
   Future<void> init() async {
     try {
-      final options = InterpreterOptions()..threads = 4; // Multi-threaded inference
+      final options = InterpreterOptions()..threads = 4;
+      
+      // Attempt to add NNAPI Delegate for Android Hardware Acceleration
+      if (!kIsWeb) {
+        try {
+          options.addDelegate(NnapiDelegate());
+          print('[Native] HW Acceleration (NNAPI) enabled.');
+        } catch (e) {
+          print('[Native] NNAPI not supported, falling back to CPU multi-threading.');
+        }
+      }
+
       _interpreter = await Interpreter.fromAsset(_modelPath, options: options);
       final raw = await rootBundle.loadString(_labelsPath);
       _labels = raw.split('\n').where((l) => l.trim().isNotEmpty).toList();
       _isReady = true;
-      print('[Native] SSD Engine ready with 4 threads. Labels: ${_labels.length}');
+      print('[Native] Infinity-FPS Engine ready. Labels: ${_labels.length}');
     } catch (e) {
       print('[Native] SSD Detection init failed: $e');
       _isReady = false;
@@ -36,7 +47,7 @@ class TfliteInferenceService {
       return [];
     }
     try {
-      // 1. Convert YUV CameraImage → 300x300 RGB byte list (SSD Standard)
+      // 1. Convert YUV CameraImage → 300x300 RGB byte list (Dynamic target)
       const int targetSize = 300;
       final input = await compute(_convertYUV420ToRGB, {
         'y': cameraImage.planes[0].bytes,
@@ -53,13 +64,7 @@ class TfliteInferenceService {
 
       if (input == null) return [];
 
-      // 2. Prepare SSD Output Tensors (Multi-Output)
-      // SSD Mobilenet V2 quant outputs 4 tensors:
-      // Index 0: Locations [1, 10, 4]
-      // Index 1: Classes [1, 10]
-      // Index 2: Scores [1, 10]
-      // Index 3: Num Detections [1]
-      
+      // 2. Prepare SSD Output Tensors
       final Map<int, Object> outputMap = {
         0: List.filled(1 * 20 * 4, 0.0).reshape([1, 20, 4]),
         1: List.filled(1 * 20, 0.0).reshape([1, 20]),
@@ -79,35 +84,32 @@ class TfliteInferenceService {
       final List<DetectedObject> results = [];
       for (int i = 0; i < min(count, 20); i++) {
         final double score = (scores[i] as num).toDouble();
-        if (score < 0.45) continue; // High confidence threshold for stability
+        if (score < 0.45) continue; 
 
         final int classIdx = (classes[i] as num).toInt();
         if (classIdx >= _labels.length || _labels[classIdx] == '???') continue;
 
         final String label = _labels[classIdx];
-        
-        // Locations in SSD are [ymin, xmin, ymax, xmax]
         final List<dynamic> box = locations[i] as List<dynamic>;
-        final double ymin = (box[0] as num).toDouble();
-        final double xmin = (box[1] as num).toDouble();
-        final double ymax = (box[2] as num).toDouble();
-        final double xmax = (box[3] as num).toDouble();
-
+        
         results.add(
           DetectedObject(
             name: label[0].toUpperCase() + label.substring(1),
             distanceMeters: double.parse(((1.0 - score) * 10.0 + 0.5).toStringAsFixed(1)),
             riskLevel: score > 0.8 ? RiskLevel.safe : RiskLevel.warning,
             icon: _iconFor(label),
-            boundingBox: Rect.fromLTRB(xmin, ymin, xmax, ymax), // Normalized coordinates
+            boundingBox: Rect.fromLTRB(
+              (box[1] as num).toDouble(), 
+              (box[0] as num).toDouble(), 
+              (box[3] as num).toDouble(), 
+              (box[2] as num).toDouble()
+            ),
           ),
         );
       }
 
       return results;
     } catch (e) {
-      // If we hit a dimension mismatch, it's likely because the user hasn't 
-      // replaced the Classifier model with an SSD model yet.
       print('[Native] Detection failure: $e');
       return [];
     }
@@ -133,7 +135,8 @@ class TfliteInferenceService {
   }
 }
 
-/// Dynamic top-level function for compute() isolate processing.
+/// Infinity-FPS Optimized Isolate Worker. 
+/// Uses Integer Bit-Shifting and Pre-calculated Row Offsets.
 Uint8List? _convertYUV420ToRGB(Map<String, dynamic> data) {
   try {
     final Uint8List yPlane = data['y'];
@@ -150,19 +153,36 @@ Uint8List? _convertYUV420ToRGB(Map<String, dynamic> data) {
     final rgb = Uint8List(targetW * targetH * 3);
     int idx = 0;
 
+    // Pre-calculate scaling factors to avoid 'floor' inside loop
+    final double scaleW = width / targetW;
+    final double scaleH = height / targetH;
+
     for (int y = 0; y < targetH; y++) {
+      final int srcY = (y * scaleH).toInt();
+      final int yOffset = srcY * yRowStride;
+      final int uvRowOffset = (srcY >> 1) * uvRowStride;
+
       for (int x = 0; x < targetW; x++) {
-        final srcX = (x * width / targetW).floor();
-        final srcY = (y * height / targetH).floor();
+        final int srcX = (x * scaleW).toInt();
 
-        final yv = yPlane[srcY * yRowStride + srcX];
-        final uvIdx = (srcY ~/ 2) * uvRowStride + (srcX ~/ 2) * uvPixelStride;
-        final u = uPlane[uvIdx] - 128;
-        final v = vPlane[uvIdx] - 128;
+        final int yv = yPlane[yOffset + srcX];
+        final int uvIdx = uvRowOffset + (srcX >> 1) * uvPixelStride;
+        
+        final int u_prime = uPlane[uvIdx] - 128;
+        final int v_prime = vPlane[uvIdx] - 128;
 
-        rgb[idx++] = (yv + 1.370705 * v).clamp(0, 255).toInt();
-        rgb[idx++] = (yv - 0.698001 * v - 0.337633 * u).clamp(0, 255).toInt();
-        rgb[idx++] = (yv + 1.732446 * u).clamp(0, 255).toInt();
+        // Integer-based YUV conversion (Faster than float)
+        // R = Y + 1.402 * V'
+        // G = Y - 0.344 * U' - 0.714 * V'
+        // B = Y + 1.772 * U'
+        
+        int r = (yv + ((359 * v_prime) >> 8));
+        int g = (yv - ((88 * u_prime + 183 * v_prime) >> 8));
+        int b = (yv + ((454 * u_prime) >> 8));
+
+        rgb[idx++] = r < 0 ? 0 : (r > 255 ? 255 : r);
+        rgb[idx++] = g < 0 ? 0 : (g > 255 ? 255 : g);
+        rgb[idx++] = b < 0 ? 0 : (b > 255 ? 255 : b);
       }
     }
     return rgb;
