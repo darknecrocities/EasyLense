@@ -47,6 +47,15 @@ EasyLens bridges the gap between digital intelligence and physical navigation. T
 - **BLE Synergy:** Reactive Bluetooth Low Energy (BLE) status monitoring for seamless pairing with IoT Smart Glasses.
 - **Hazard Alerts:** (Experimental) Special detection tracks for common hazards like stairs and vehicles.
 
+### 👁️ Intelligence Layer
+- **Core Model:** Powered by a customized **MobileNetV2-SSD** (Single Shot MultiBox Detector) quantized for INT8 performance. This allows for rapid, simultaneous detection and classification of multiple objects directly on the mobile device's NPU/DSP.
+- **Generative Insight:** Integrates **Gemini 3.1 Flash-Lite** for complex scene understanding. When a user asks a specific question (e.g., "What is written on that sign?"), the app captures a high-resolution frame and leverages Gemini to provide a 1-2 sentence descriptive breakdown.
+
+### 📡 Hybrid IoT Connectivity
+EasyLens uses a "Dual-Link" communication strategy to balance power efficiency and data bandwidth:
+- **WiFi (High Bandwidth):** Used for real-time high-resolution camera frame streaming from the Smart Glasses to the application.
+- **BLE (Control/Status):** A persistent Bluetooth Low Energy link handles pairing, device status, battery telemetry, and immediate haptic trigger signals.
+
 ---
 
 ## 🏗️ System Architecture
@@ -55,16 +64,23 @@ EasyLens utilizes a decoupled service-layer architecture to ensure stability acr
 
 ### 🔄 Data Flow Protocol
 ```mermaid
-graph LR
-    Environment[Physical Environment] -->|Captured by| Camera[Camera Stream]
-    Camera -->|InputImage| MLKit[Google ML Kit Processor]
-    MLKit -->|Object Box| HUD[Dynamic Dashboard]
-    MLKit -->|Semantic Label| Labels[Compound Label Map]
-    Labels -->|Display| UI[High-Contrast Profile]
+graph TD
+    Glasses[IoT Smart Glasses] -->|WiFi Stream| App[Flutter App]
+    Glasses -->|BLE Connection| App
+    subgraph "On-Device Engine"
+        App -->|Quantized Tensor| MobileNet[MobileNetV2 SSD Model]
+        MobileNet -->|Bounding Boxes| UI[Dash/HUD]
+    end
+    subgraph "Cloud Intelligence"
+        App -->|Encoded Frame| Gemini[Gemini 3.1 Flash-Lite]
+        Gemini -->|Natural Language| Audio[Voice Output]
+    end
 ```
 
-### 🧠 Vision Architecture
-EasyLens employs a **Base Object Detector** for performance (tracking boxes every frame) and a **Semantic Image Labeler** for specificity (running every 5th frame), ensuring a fluid UI while maintaining high intelligence.
+### 🧠 MobileNetV2 SSD Optimization
+The detection pipeline is specifically tuned for lower-tier Android hardware:
+- **Depthwise Separable Convolutions:** Reduces parameters and mathematical operations by ~8x compared to standard CNNs.
+- **INT8 Quantization:** Through POST-training quantization, the model footprint is reduced to <5MB while maintaining 90%+ of FP32 precision.
 
 ---
 
@@ -73,22 +89,24 @@ EasyLens employs a **Base Object Detector** for performance (tracking boxes ever
 | Category | Technology |
 | :--- | :--- |
 | **Foundation** | [Flutter](https://flutter.dev) / [Dart](https://dart.dev) |
-| **Intelligence** | [Google ML Kit](https://developers.google.com/ml-kit) (Object Detection & Image Labeling) |
+| **Edge Vision** | **MobileNetV2 SSD** via Google ML Kit / TFLite |
+| **Generative AI**| **Gemini 3.1 Flash-Lite** (Google Generative AI SDK) |
 | **Backend** | [Firebase](https://firebase.google.com) (Auth, Firestore) |
 | **Cloud Storage** | [Cloudflare R2](https://www.cloudflare.com/products/r2/) (S3-Compatible Object Storage) |
-| **State Management** | [Provider](https://pub.dev/packages/provider) |
-| **IoT/Hardware** | [Bluetooth Low Energy (BLE)](https://pub.dev/packages/flutter_blue_plus) |
-| **Configuration** | [Flutter Dotenv](https://pub.dev/packages/flutter_dotenv) |
+| **IoT Control**| Bluetooth Low Energy (BLE) |
+| **Data Stream** | High-Speed WiFi (TCP/UDP Stream) |
+| **State** | [Provider](https://pub.dev/packages/provider) |
 
 ---
 
 ## 🏁 Roadmap to Production
 
 - [x] **Phase 1: Foundation** — UI System, Firebase Auth, and Theme Engine.
-- [x] **Phase 2: Vision Core** — Google ML Kit Dual-API integration and Compound Labeling.
-- [x] **Phase 3: Cloud Sync** — Cloudflare R2 Profile Photo hosting and Firestore Metadata.
-- [/] **Phase 4: Navigation** — Full Turn-by-Turn integration and Google Maps Sync.
-- [ ] **Phase 5: Hardware Integration** — Direct camera streaming from ESP32-CAM Smart Glasses.
+- [x] **Phase 2: Vision Core** — Google ML Kit Dual-API and **MobileNetV2 SSD** integration.
+- [x] **Phase 3: Deep Context** — **Gemini 3.1 Flash** integration for scene auditing.
+- [x] **Phase 4: Cloud Sync** — Cloudflare R2 Profile Photo hosting and Firestore Metadata.
+- [/] **Phase 5: Navigation** — Full Turn-by-Turn integration and Google Maps Sync.
+- [ ] **Phase 6: Hardware Sync** — Real-time WiFi streaming from physical ESP32-CAM Smart Glasses.
 
 ---
 
