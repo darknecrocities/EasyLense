@@ -4,6 +4,7 @@ import '../models/detected_object.dart';
 import '../services/ai_detection_service.dart';
 import '../services/tts_service.dart';
 import '../services/nlp_formatter.dart';
+import '../services/hazard_mapper.dart';
 
 /// Manages detection state, triggering scans and TTS announcements.
 class DetectionProvider extends ChangeNotifier {
@@ -33,6 +34,7 @@ class DetectionProvider extends ChangeNotifier {
   Future<void> init() async {
     await ttsService.init();
     await _aiService.init();
+    await HazardMapper.init(); // Load hazards mapping JSON
   }
 
   /// Set the language code and update TTS.
@@ -43,12 +45,15 @@ class DetectionProvider extends ChangeNotifier {
   }
 
   /// Perform a single detection scan.
-  Future<void> scanEnvironment({CameraImage? cameraImage}) async {
+  Future<void> scanEnvironment({CameraImage? cameraImage, int? sensorOrientation}) async {
     _isScanning = true;
     notifyListeners();
 
     try {
-      _detections = await _aiService.detect(cameraImage: cameraImage);
+      _detections = await _aiService.detect(
+        cameraImage: cameraImage, 
+        sensorOrientation: sensorOrientation,
+      );
       
       _totalScans += 1;
       _totalObjects += _detections.length;

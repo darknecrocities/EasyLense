@@ -19,7 +19,8 @@ class AiDetectionService {
 
   Future<void> init() => _engine.init();
 
-  Future<List<DetectedObject>> detect({CameraImage? cameraImage}) => _engine.detect(cameraImage: cameraImage);
+  Future<List<DetectedObject>> detect({CameraImage? cameraImage, int? sensorOrientation}) => 
+      _engine.detect(cameraImage: cameraImage, sensorOrientation: sensorOrientation);
 
   Future<void> dispose() async {
     // Both native and stub engines should implement close/cleanup logic if needed.

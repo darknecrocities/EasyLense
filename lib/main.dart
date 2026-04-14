@@ -8,8 +8,10 @@ import 'providers/settings_provider.dart';
 import 'services/firebase_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'theme/app_theme.dart';
-import 'screens/welcome_screen.dart';
-import 'screens/home_screen.dart';
+import 'screens/onboarding/welcome_screen.dart';
+import 'screens/main/home_screen.dart';
+import 'providers/navigation_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -63,26 +65,70 @@ class EasyLensApp extends StatelessWidget {
           },
         ),
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
+        ChangeNotifierProvider(create: (_) => NavigationProvider()),
       ],
       child: MaterialApp(
         title: 'EasyLens',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.darkTheme,
-        home: StreamBuilder<User?>(
-          stream: FirebaseAuth.instance.authStateChanges(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Scaffold(
-                body: Center(child: CircularProgressIndicator(color: Color(0xFF08209A))),
-              );
-            }
-            if (snapshot.hasData) {
-              return const HomeScreen();
-            }
-            return const WelcomeScreen();
-          },
-        ),
+        home: const AuthWrapper(),
       ),
+    );
+  }
+}
+
+class AuthWrapper extends StatefulWidget {
+  const AuthWrapper({super.key});
+
+  @override
+  State<AuthWrapper> createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends State<AuthWrapper> {
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkStayLoggedIn();
+  }
+
+  Future<void> _checkStayLoggedIn() async {
+    final prefs = await SharedPreferences.getInstance();
+    final stayLoggedIn = prefs.getBool('stay_logged_in') ?? false;
+
+    if (!stayLoggedIn && FirebaseAuth.instance.currentUser != null) {
+      await FirebaseAuth.instance.signOut();
+    }
+
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator(color: Color(0xFF08209A))),
+      );
+    }
+
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator(color: Color(0xFF08209A))),
+          );
+        }
+        if (snapshot.hasData) {
+          return const HomeScreen();
+        }
+        return const WelcomeScreen();
+      },
     );
   }
 }

@@ -129,8 +129,9 @@ class GeminiProvider extends ChangeNotifier {
 
     } catch (e) {
       print("Gemini Conversation Error: $e");
-      await _ttsService.speak("Oops, something went wrong updating the vision prompt.");
-      await Future.delayed(const Duration(seconds: 2));
+      // Only speak a fallback if it wasn't a handled response already
+      await _ttsService.speak("Oops, I encountered a connection issue. Let's try again in a moment.");
+      await Future.delayed(const Duration(seconds: 3)); // Error cooldown
     } finally {
       if (_mounted) {
           _isProcessing = false;
@@ -138,6 +139,8 @@ class GeminiProvider extends ChangeNotifier {
           
           // 4. Loop back to listening!
           if (_isActive) {
+            // Briefly wait after any interaction (success or failure) to let user breathe
+            await Future.delayed(const Duration(seconds: 1));
             await _startListening();
           }
       }

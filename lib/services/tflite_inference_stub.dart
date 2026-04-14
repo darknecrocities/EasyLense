@@ -22,7 +22,7 @@ class TfliteInferenceService {
     print('[Web] TFLite not supported in browser — mock inference active.');
   }
 
-  Future<List<DetectedObject>> detect({CameraImage? cameraImage}) async {
+  Future<List<DetectedObject>> detect({CameraImage? cameraImage, int? sensorOrientation}) async {
     await Future.delayed(const Duration(milliseconds: 200));
     final count = _random.nextInt(4); // 0-3 objects
     final shuffled = List<_Def>.from(_pool)..shuffle(_random);

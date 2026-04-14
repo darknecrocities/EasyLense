@@ -1,192 +1,38 @@
-import 'dart:math';
-import 'dart:typed_data';
-import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter/foundation.dart';
-import 'package:tflite_flutter/tflite_flutter.dart';
+import 'package:camera/camera.dart';
 import '../models/detected_object.dart';
+import 'mlkit_processor.dart';
 
-/// Native mobile implementation using SSD Object Detection.
-/// This engine produces moving bounding boxes for 80-90 common objects.
+/// Native mobile implementation using the Native Google ML Kit Custom Model Pipeline.
 class TfliteInferenceService {
-  static const String _modelPath = 'assets/models/ssd_mobilenet_v2_quantized.tflite';
-  static const String _labelsPath = 'assets/models/labels.txt';
-
-  Interpreter? _interpreter;
-  List<String> _labels = [];
-  bool _isReady = false;
+  final MlKitProcessor _processor = MlKitProcessor();
 
   Future<void> init() async {
-    try {
-      final options = InterpreterOptions()..threads = 4;
-      
-      // Attempt to add NNAPI Delegate for Android Hardware Acceleration
-      if (!kIsWeb) {
-        try {
-          options.addDelegate(NnapiDelegate());
-          print('[Native] HW Acceleration (NNAPI) enabled.');
-        } catch (e) {
-          print('[Native] NNAPI not supported, falling back to CPU multi-threading.');
-        }
-      }
-
-      _interpreter = await Interpreter.fromAsset(_modelPath, options: options);
-      final raw = await rootBundle.loadString(_labelsPath);
-      _labels = raw.split('\n').where((l) => l.trim().isNotEmpty).toList();
-      _isReady = true;
-      print('[Native] Infinity-FPS Engine ready. Labels: ${_labels.length}');
-    } catch (e) {
-      print('[Native] SSD Detection init failed: $e');
-      _isReady = false;
-    }
+    await _processor.init();
   }
 
-  Future<List<DetectedObject>> detect({CameraImage? cameraImage}) async {
-    if (!_isReady || _interpreter == null || cameraImage == null) {
-      return [];
-    }
-    try {
-      // 1. Convert YUV CameraImage → 300x300 RGB byte list (Dynamic target)
-      const int targetSize = 300;
-      final input = await compute(_convertYUV420ToRGB, {
-        'y': cameraImage.planes[0].bytes,
-        'u': cameraImage.planes[1].bytes,
-        'v': cameraImage.planes[2].bytes,
-        'width': cameraImage.width,
-        'height': cameraImage.height,
-        'yRowStride': cameraImage.planes[0].bytesPerRow,
-        'uvRowStride': cameraImage.planes[1].bytesPerRow,
-        'uvPixelStride': cameraImage.planes[1].bytesPerPixel ?? 1,
-        'targetW': targetSize,
-        'targetH': targetSize,
-      });
-
-      if (input == null) return [];
-
-      // 2. Prepare SSD Output Tensors
-      final Map<int, Object> outputMap = {
-        0: List.filled(1 * 20 * 4, 0.0).reshape([1, 20, 4]),
-        1: List.filled(1 * 20, 0.0).reshape([1, 20]),
-        2: List.filled(1 * 20, 0.0).reshape([1, 20]),
-        3: List.filled(1, 0.0).reshape([1]),
-      };
-
-      // 3. Run inference
-      _interpreter!.runForMultipleInputs([input.reshape([1, targetSize, targetSize, 3])], outputMap);
-
-      // 4. Parse Results
-      final locations = (outputMap[0] as List<dynamic>)[0] as List<dynamic>;
-      final classes = (outputMap[1] as List<dynamic>)[0] as List<dynamic>;
-      final scores = (outputMap[2] as List<dynamic>)[0] as List<dynamic>;
-      final int count = ((outputMap[3] as List<dynamic>)[0] as double).toInt();
-
-      final List<DetectedObject> results = [];
-      for (int i = 0; i < min(count, 20); i++) {
-        final double score = (scores[i] as num).toDouble();
-        if (score < 0.45) continue; 
-
-        final int classIdx = (classes[i] as num).toInt();
-        if (classIdx >= _labels.length || _labels[classIdx] == '???') continue;
-
-        final String label = _labels[classIdx];
-        final List<dynamic> box = locations[i] as List<dynamic>;
-        
-        results.add(
-          DetectedObject(
-            name: label[0].toUpperCase() + label.substring(1),
-            distanceMeters: double.parse(((1.0 - score) * 10.0 + 0.5).toStringAsFixed(1)),
-            riskLevel: score > 0.8 ? RiskLevel.safe : RiskLevel.warning,
-            icon: _iconFor(label),
-            boundingBox: Rect.fromLTRB(
-              (box[1] as num).toDouble(), 
-              (box[0] as num).toDouble(), 
-              (box[3] as num).toDouble(), 
-              (box[2] as num).toDouble()
-            ),
-          ),
-        );
-      }
-
-      return results;
-    } catch (e) {
-      print('[Native] Detection failure: $e');
-      return [];
-    }
+  Future<List<DetectedObject>> detect({CameraImage? cameraImage, int? sensorOrientation}) async {
+    if (cameraImage == null) return [];
+    
+    // 1. Process with Native ML Kit
+    final mlResults = await _processor.process(cameraImage, sensorOrientation ?? 90);
+    
+    // 2. Map to DetectedObject for the UI
+    return mlResults.map<DetectedObject>((ml) {
+      return DetectedObject(
+        name: ml.label ?? 'Object',
+        distanceMeters: 15.0,
+        riskLevel: RiskLevel.safe,
+        icon: Icons.visibility,
+        boundingBox: ml.boundingBox,
+        trackingId: ml.trackingId,
+        confidence: ml.confidence,
+        source: 'mlkit',
+      );
+    }).toList();
   }
 
   void close() {
-    _interpreter?.close();
-    _isReady = false;
-  }
-
-  IconData _iconFor(String label) {
-    final l = label.toLowerCase();
-    if (l.contains('car') || l.contains('truck') || l.contains('bus') || l.contains('motorcycle')) return Icons.directions_car;
-    if (l.contains('person')) return Icons.directions_walk;
-    if (l.contains('chair') || l.contains('bench') || l.contains('couch')) return Icons.chair;
-    if (l.contains('stair')) return Icons.stairs;
-    if (l.contains('bicycle') || l.contains('bike')) return Icons.pedal_bike;
-    if (l.contains('door')) return Icons.door_front_door;
-    if (l.contains('traffic light')) return Icons.traffic;
-    if (l.contains('keyboard') || l.contains('laptop') || l.contains('mouse') || l.contains('tv')) return Icons.devices;
-    if (l.contains('bottle') || l.contains('cup') || l.contains('wine glass')) return Icons.local_drink;
-    return Icons.warning_amber_rounded;
-  }
-}
-
-/// Infinity-FPS Optimized Isolate Worker. 
-/// Uses Integer Bit-Shifting and Pre-calculated Row Offsets.
-Uint8List? _convertYUV420ToRGB(Map<String, dynamic> data) {
-  try {
-    final Uint8List yPlane = data['y'];
-    final Uint8List uPlane = data['u'];
-    final Uint8List vPlane = data['v'];
-    final int width = data['width'];
-    final int height = data['height'];
-    final int yRowStride = data['yRowStride'];
-    final int uvRowStride = data['uvRowStride'];
-    final int uvPixelStride = data['uvPixelStride'];
-    final int targetW = data['targetW'];
-    final int targetH = data['targetH'];
-
-    final rgb = Uint8List(targetW * targetH * 3);
-    int idx = 0;
-
-    // Pre-calculate scaling factors to avoid 'floor' inside loop
-    final double scaleW = width / targetW;
-    final double scaleH = height / targetH;
-
-    for (int y = 0; y < targetH; y++) {
-      final int srcY = (y * scaleH).toInt();
-      final int yOffset = srcY * yRowStride;
-      final int uvRowOffset = (srcY >> 1) * uvRowStride;
-
-      for (int x = 0; x < targetW; x++) {
-        final int srcX = (x * scaleW).toInt();
-
-        final int yv = yPlane[yOffset + srcX];
-        final int uvIdx = uvRowOffset + (srcX >> 1) * uvPixelStride;
-        
-        final int u_prime = uPlane[uvIdx] - 128;
-        final int v_prime = vPlane[uvIdx] - 128;
-
-        // Integer-based YUV conversion (Faster than float)
-        // R = Y + 1.402 * V'
-        // G = Y - 0.344 * U' - 0.714 * V'
-        // B = Y + 1.772 * U'
-        
-        int r = (yv + ((359 * v_prime) >> 8));
-        int g = (yv - ((88 * u_prime + 183 * v_prime) >> 8));
-        int b = (yv + ((454 * u_prime) >> 8));
-
-        rgb[idx++] = r < 0 ? 0 : (r > 255 ? 255 : r);
-        rgb[idx++] = g < 0 ? 0 : (g > 255 ? 255 : g);
-        rgb[idx++] = b < 0 ? 0 : (b > 255 ? 255 : b);
-      }
-    }
-    return rgb;
-  } catch (e) {
-    return null;
+    _processor.close();
   }
 }

@@ -1,0 +1,97 @@
+{
+  "clear": {
+    "title": "Path Clear",
+    "description": "No hazards detected nearby.",
+    "imagePath": "assets/icons/hazards-icons/clear.png",
+    "icon": "check_circle_outline"
+  },
+  "mappings": [
+    {
+      "labels": ["car", "bus", "truck", "motorcycle"],
+      "title": "Vehicle Detected",
+      "description": "Vehicle approaching. Please wait",
+      "imagePath": "assets/icons/hazards-icons/vechicles.png",
+      "icon": "directions_car"
+    },
+    {
+      "labels": ["person"],
+      "title": "Hazard",
+      "description": "Obstacle approaching. Proceed slowly.",
+      "imagePath": "assets/icons/hazards-icons/pedestrian.png",
+      "icon": "directions_walk"
+    },
+    {
+      "labels": ["stop sign", "traffic light"],
+      "title": "STOP!",
+      "description": "Immediate hazard in your path",
+      "imagePath": "assets/icons/hazards-icons/highly_danger.png",
+      "icon": "front_hand"
+    },
+    {
+      "labels": ["stair"],
+      "title": "Stairs Detected",
+      "description": "Step carefully.",
+      "imagePath": "assets/icons/hazards-icons/stairs.png",
+      "icon": "stairs"
+    },
+    {
+      "labels": ["chair", "bench", "couch", "table", "bottle", "cup", "wine glass"],
+      "title": "Obstacle Ahead",
+      "description": "Object blocking path.",
+      "imagePath": "assets/icons/hazards-icons/obstacles.png",
+      "icon": "category"
+    },
+    {
+      "labels": ["pothole"],
+      "title": "Potholes Detected",
+      "description": "Drop-off or pothole ahead. Stop.",
+      "imagePath": "assets/icons/hazards-icons/potholes.png",
+      "icon": "warning"
+    },
+    {
+      "labels": ["fire", "flame", "smoke"],
+      "title": "Fire Hazard",
+      "description": "Fire or smoke detected. Move away immediately.",
+      "imagePath": "assets/icons/hazards-icons/flame.png",
+      "icon": "local_fire_department"
+    }
+  ],
+  "states": {
+    "caution": {
+      "title": "Caution",
+      "description": "Object approaching. Proceed slowly.",
+      "imagePath": "assets/icons/hazards-icons/medium_danger.png",
+      "icon": "warning"
+    },
+    "low_light": {
+      "title": "Low Light Detected",
+      "description": "Camera visibility is low. Scanning accuracy reduced.",
+      "imagePath": "assets/icons/hazards-icons/low_light.png",
+      "icon": "brightness_4"
+    },
+    "moving_fast": {
+      "title": "Moving Too Fast",
+      "description": "Hold steady for a moment to resume scanning.",
+      "imagePath": "assets/icons/hazards-icons/fast_move.png",
+      "icon": "speed"
+    },
+    "multiple_hazards": {
+      "title": "Multiple Hazards",
+      "description": "Complex environment detected. Proceed with extreme caution.",
+      "imagePath": "assets/icons/hazards-icons/multi_hazards.png",
+      "icon": "report_problem"
+    },
+    "paused": {
+      "title": "Scanning Paused",
+      "description": "Camera and alerts are currently off.",
+      "imagePath": "assets/icons/hazards-icons/multi_hazards.png",
+      "icon": "pause_circle_filled"
+    },
+    "damaged_pathway": {
+      "title": "Damaged Pathway",
+      "description": "Road damage ahead. Proceed with caution.",
+      "imagePath": "assets/icons/hazards-icons/canals.png",
+      "icon": "warning"
+    }
+  }
+}

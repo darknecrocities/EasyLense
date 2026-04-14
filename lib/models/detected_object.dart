@@ -10,6 +10,9 @@ class DetectedObject {
   final RiskLevel riskLevel;
   final IconData icon;
   final Rect? boundingBox;
+  final int? trackingId;
+  final double confidence;
+  final String source; // "mlkit" or "ssd"
 
   const DetectedObject({
     required this.name,
@@ -17,6 +20,9 @@ class DetectedObject {
     required this.riskLevel,
     required this.icon,
     this.boundingBox,
+    this.trackingId,
+    this.confidence = 0.0,
+    this.source = 'ssd',
   });
 
   /// Human-readable risk label.
@@ -46,3 +52,4 @@ class DetectedObject {
   /// Distance formatted as a short string.
   String get distanceLabel => '${distanceMeters.toStringAsFixed(1)} m';
 }
+

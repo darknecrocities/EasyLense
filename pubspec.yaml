@@ -26,6 +26,14 @@ dependencies:
   google_generative_ai: ^0.4.6
   speech_to_text: ^6.6.1
   tflite_flutter: ^0.12.0
+  google_mlkit_object_detection: ^0.13.0
+  flutter_map: ^7.0.2
+  latlong2: ^0.9.1
+  geolocator: ^12.0.0
+  geocoding: ^3.0.0
+  http: ^1.2.1
+  path_provider: ^2.1.5
+  google_mlkit_image_labeling: ^0.12.1
 
 dev_dependencies:
   flutter_test:
@@ -55,8 +63,13 @@ flutter:
     - assets/icons/object-icon/
     - assets/animation/
     - assets/app_icon_logo.png
+    - assets/icons/navigation-icons/
+    - assets/icons/device-icons/
+    - assets/models/mlkit_ssd_mobilenet_v1.tflite
     - assets/models/ssd_mobilenet_v2_quantized.tflite
+    - assets/models/mobilenet_v2_ssd_quant_int8.tflite
     - assets/models/labels.txt
+    - assets/models/hazards_config.json
 
   fonts:
     - family: HeaderFont
