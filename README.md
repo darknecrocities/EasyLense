@@ -4,10 +4,11 @@
 
 [![Flutter](https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white)](https://flutter.dev)
 [![Dart](https://img.shields.io/badge/Dart-0175C2?style=for-the-badge&logo=dart&logoColor=white)](https://dart.dev)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
-[![Accessibility-First](https://img.shields.io/badge/Accessibility-First-4CAF50?style=for-the-badge)](https://www.w3.org/WAI/standards-guidelines/wcag/)
+[![Google ML Kit](https://img.shields.io/badge/ML%20Kit-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/ml-kit)
+[![Cloudflare R2](https://img.shields.io/badge/Cloudflare%20R2-F38020?style=for-the-badge&logo=cloudflare&logoColor=white)](https://www.cloudflare.com/products/r2/)
+[![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](https://firebase.google.com)
 
-**EasyLens** is a sophisticated assistive navigation solution designed to provide visually impaired users with real-time, AI-driven environmental awareness. By integrating a mobile application with specialized IoT smart glasses, EasyLens acts as a digital companion, translating the visual world into understandable audio guidance.
+**EasyLens** is a sophisticated assistive navigation solution designed to provide visually impaired users with real-time, AI-driven environmental awareness. By integrating a mobile application with specialized IoT smart glasses, EasyLens acts as a digital companion, translating the visual world into understandable audio guidance and high-contrast visual cues.
 
 ---
 
@@ -15,171 +16,97 @@
 
 | 🧗 Independence | 🛡️ Safety | ♿ Accessibility |
 | :--- | :--- | :--- |
-| Empowering users to navigate unfamiliar environments without constant human assistance. | Prioritizing hazard detection to prevent accidents from stairs, vehicles, and obstacles. | Born from the ground up to follow strict accessibility principles for seamless interaction. |
+| Empowering users to navigate unfamiliar environments without constant human assistance. | Prioritizing hazard detection to prevent accidents from stairs, vehicles, and obstacles. | Born from the ground up to follow strict accessibility principles (WCAG) for seamless interaction. |
 
 ---
 
 ## 🚀 Project Overview
 
-EasyLens bridges the gap between digital intelligence and physical navigation. The system consists of a high-performance Flutter mobile application linked via Bluetooth (BLE) to a pair of IoT smart glasses equipped with cameras and sensors.
-
-### ✨ Key Features
-- **🧠 Edge AI Processing:** Local inference for near-zero latency and total data privacy.
-- **🗣️ Multilingual Voice:** Real-time translations into **English** and **Filipino**, tailored for local context.
-- **📡 BLE Synergy:** Persistent, low-energy connection to smart glasses hardware.
-- **🚨 Emergency Guardian:** Rapid-trigger emergency protocol with haptic feedback and contact alerts.
-- **🎨 High-Contrast UI:** Glassmorphism-inspired design optimized for low-vision readability.
+EasyLens bridges the gap between digital intelligence and physical navigation. The system consists of a high-performance Flutter mobile application that leverages **Google ML Kit** for on-device vision processing and **Cloudflare R2** for efficient asset hosting, providing a seamless "connected" experience for the visually impaired.
 
 ---
 
-## 🏗️ System Architecture & Implementation
+## ✨ Key Features
 
-### The Service Layer
-EasyLens utilizes a decoupled service-layer architecture to ensure scalability and reliability:
+### 👁️ Dual-API Vision System
+- **Real-Time Detection:** Native Google ML Kit Object Detection providing tight bounding boxes and persistent tracking IDs.
+- **Granular Classification:** Integrated Image Labeling API identifying **400+ specific objects** (e.g., "Laptop", "Chair", "Beverage") instead of generic categories.
+- **Compound Labeling:** Intelligently combines base categories with specific semantic names (e.g., "Home Good - Laptop").
 
-- **AI Inference Engine:** A TFLite-ready pipeline (currently simulated) that classifies objects into danger categories.
-- **NLP Audio Formatter:** A localization layer that converts raw detection data into natural, human-like sentences.
-- **IoT Connectivity Service:** Manages BLE life cycles, bonding, and data streaming between the app and the glasses.
-- **Haptic Feedback Service:** Provides tactile confirmation for all UI interactions, essential for visually impaired users.
+### 🗺️ Navigation Hub
+- **Smart Search:** Search for destinations with Google Maps integration.
+- **Historical Tracking:** Quick access to "Recent Destinations" for repeated routes.
+- **Visual Guidance:** High-contrast directions and "Start Navigation" triggers with haptic feedback.
 
----
+### 👤 Profile & Cloud Sync
+- **Identity Management:** Secure Firebase Authentication (Login/Signup/Password Reset).
+- **Photo Hosting:** User profile pictures are hosted on **Cloudflare R2** via S3-compatible APIs for high performance and scalability.
+- **Preferences:** Personalized setup for "Visual Condition" and "Language" (English/Filipino).
 
-## 🧠 Object Detection Framework
-
-EasyLens utilizes a high-precision, two-stage object detection architecture optimized for real-time inference on power-constrained wearable devices.
-
-### 🛠️ Architecture Overview
-The detection pipeline is designed to balance accuracy and latency, ensuring safe navigation in dynamic environments like busy streets or uneven terrain.
-
-```mermaid
-graph LR
-    Input[Camera Input] --> Feature[MobileNet Backbone]
-    Feature --> RPN[Region Proposal Network]
-    RPN --> ROI[RoI Pooling]
-    ROI --> Head[Classification & Reg Head]
-    Head --> NMS[Non-Maximum Suppression]
-    NMS --> Output[Audio/Tactile Feedback]
-```
-
-### 🛰️ Core Components
-
-#### 1. MobileNet Backbone
-The system employs **MobileNet** for feature extraction. MobileNet factorizes standard convolutions into **depthwise separable convolutions** to significantly reduce computational overhead.
-
-*   **Standard Convolution:** $D_k \times D_k \times M \times N$
-*   **MobileNet Factorization:** $Depthwise + Pointwise\ Convolution$
-*   **Efficiency:** Reduces parameters and FLOPS by ~8-9x compared to standard CNNs.
-*   **Latency:** Optimized for edge hardware (Snapdragon/Apple Silicon/ARM).
-
-#### 2. Region Proposal Network (RPN)
-To ensure hazards like stairs, open canals, and small obstacles are not missed, a dedicated RPN generates candidate bounding boxes.
-*   **Anchor Boxes:** Evaluates multiple aspect ratios and scales at each spatial location.
-*   **Loss Function:** Optimized using a balanced approach: $L = L_{cls} + \lambda L_{reg}$
-
-#### 3. INT8 Quantization
-The model is converted from **FP32 (32-bit floating point)** to **INT8 (8-bit integer)** using Post-Training Quantization (PTQ).
-
-$$FP32\ Weights \rightarrow INT8\ Representation$$
-
-*   **4x Smaller:** Significantly reduces the deployment footprint.
-*   **3x Faster:** Accelerates inference on mobile NPUs and DSPs.
-*   **Power Efficient:** Extends battery life for wearable usage.
-
-### 🎯 Training Strategy
-The framework is fine-tuned using **Transfer Learning** on a curated hazard dataset, featuring data augmentation for motion blur, low-light simulation, and urban clutter.
+### 📡 IoT Connectivity
+- **BLE Synergy:** Reactive Bluetooth Low Energy (BLE) status monitoring for seamless pairing with IoT Smart Glasses.
+- **Hazard Alerts:** (Experimental) Special detection tracks for common hazards like stairs and vehicles.
 
 ---
 
-## 📊 Technical Diagrams
+## 🏗️ System Architecture
 
-### 🗺️ System Architecture
-```mermaid
-graph TD
-    subgraph "Frontend (Flutter)"
-        UI[Glassmorphic UI]
-        Providers[Provider State Management]
-    end
-
-    subgraph "Core Services"
-        AI[AI Detection Service]
-        TTS[TTS Audio Service]
-        WIFI[WIFI Connection Service]
-        NLP[NLP Translation Service]
-    end
-
-    subgraph "External Integration"
-        Glasses[IoT Smart Glasses via BLE]
-        TFLite[TensorFlow Lite Models]
-    end
-
-    UI <--> Providers
-    Providers <--> Services
-    Services --- AI & TTS & WIFI & NLP
-    WIFI <--> Glasses
-    AI <--> TFLite
-```
+EasyLens utilizes a decoupled service-layer architecture to ensure stability across vision and navigation tasks.
 
 ### 🔄 Data Flow Protocol
 ```mermaid
 graph LR
-    Environment[Physical Environment] -->|Captured by| Camera[Glass Camera]
-    Camera -->|Raw Frame| App[EasyLens App]
-    App -->|Input| AI[AI Inference Engine]
-    AI -->|Risk Level/Tag| NLP[NLP Formatter]
-    NLP -->|Formatted Text| Audio[TTS Service]
-    Audio -->|Speech Out| User[User Awareness]
+    Environment[Physical Environment] -->|Captured by| Camera[Camera Stream]
+    Camera -->|InputImage| MLKit[Google ML Kit Processor]
+    MLKit -->|Object Box| HUD[Dynamic Dashboard]
+    MLKit -->|Semantic Label| Labels[Compound Label Map]
+    Labels -->|Display| UI[High-Contrast Profile]
 ```
 
-### 🔗 Interface Relationship (ERD)
-```mermaid
-erDiagram
-    USER ||--o{ DETECTION : initiates
-    USER ||--|| SETTINGS : configures
-    DETECTION ||--|| RISK_ASSESSMENT : includes
-    IOT_GLASSES ||--o{ DATA_STREAM : generates
-    DATA_STREAM ||--|| DETECTION : processed_by
-```
+### 🧠 Vision Architecture
+EasyLens employs a **Base Object Detector** for performance (tracking boxes every frame) and a **Semantic Image Labeler** for specificity (running every 5th frame), ensuring a fluid UI while maintaining high intelligence.
 
 ---
 
 ## 🛠️ Technology Stack
 
-| Technology | Purpose |
+| Category | Technology |
 | :--- | :--- |
-| **Flutter / Dart** | Cross-platform mobile foundation |
-| **Provider** | Reactive state management |
-| **Flutter TTS** | Voice feedback synchronization |
-| **Bluetooth LE** | Low-latency hardware communication |
-| **TensorFlow Lite** | (Future) On-device machine learning |
+| **Foundation** | [Flutter](https://flutter.dev) / [Dart](https://dart.dev) |
+| **Intelligence** | [Google ML Kit](https://developers.google.com/ml-kit) (Object Detection & Image Labeling) |
+| **Backend** | [Firebase](https://firebase.google.com) (Auth, Firestore) |
+| **Cloud Storage** | [Cloudflare R2](https://www.cloudflare.com/products/r2/) (S3-Compatible Object Storage) |
+| **State Management** | [Provider](https://pub.dev/packages/provider) |
+| **IoT/Hardware** | [Bluetooth Low Energy (BLE)](https://pub.dev/packages/flutter_blue_plus) |
+| **Configuration** | [Flutter Dotenv](https://pub.dev/packages/flutter_dotenv) |
 
 ---
 
 ## 🏁 Roadmap to Production
 
-- [x] **Phase 1: Prototype** — Foundation, UI System, and Simulated Services.
-- [ ] **Phase 2: Hardware Sync** — Integration with Physical ESP32/Pi Smart Glasses.
-- [ ] **Phase 3: Intelligence** — Implementation of Real-time TFLite detection models.
-- [ ] **Phase 4: Global Reach** — Support for more local dialects and improved NLP.
+- [x] **Phase 1: Foundation** — UI System, Firebase Auth, and Theme Engine.
+- [x] **Phase 2: Vision Core** — Google ML Kit Dual-API integration and Compound Labeling.
+- [x] **Phase 3: Cloud Sync** — Cloudflare R2 Profile Photo hosting and Firestore Metadata.
+- [/] **Phase 4: Navigation** — Full Turn-by-Turn integration and Google Maps Sync.
+- [ ] **Phase 5: Hardware Integration** — Direct camera streaming from ESP32-CAM Smart Glasses.
 
 ---
 
 ## 📖 Usage Guide
 
-1. **Dashboard Home:** Large radar button triggers an environmental scan.
-2. **Navigation Hub:** High-contrast buttons for repeatable instructions and emergency alerts.
-3. **Settings Console:** Toggle between English/Filipino and manage your Smart Glasses connection.
-4. **IoT Interaction:** Watch the Bluetooth status icon; once it glows Green, your glasses are actively feeding data.
+1. **Environmental Scan:** Open the Dashboard; ML Kit automatically draws and labels objects in view.
+2. **Navigation:** Swipe to the Navigation tab to search for destinations or re-trace recent routes.
+3. **Connectivity:** Pair your glasses via the Devices tab; the "Active" badge indicates data flow.
+4. **Profile:** Manage your visual condition and profile aesthetics in the Profile View.
 
 ---
 
-## 🤝 Contributing & Vision
+## 🤝 Contributing
 
-We are building EasyLens to be the open-standard for assistive vision tech. We welcome contributions from:
-- **ML Engineers:** Optimizing TFLite models for urban object detection.
-- **IoT Developers:** Enhancing BLE protocols for camera frame streaming.
-- **Accessibility Experts:** Refining the UX/UI for diverse visual needs.
-
-**License:** This project is licensed under the [MIT License](LICENSE).
+We are building EasyLens to be the open-standard for assistive vision tech.
+- **Vision:** Help us expand the `MlKitLabelMap` for better object filtering.
+- **UX/UI:** Optimize the high-contrast patterns for specific visual conditions like Glaucoma or Cataracts.
 
 ---
 *Created with ❤️ for a more accessible world.*
+
