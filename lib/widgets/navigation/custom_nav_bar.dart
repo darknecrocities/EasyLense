@@ -39,6 +39,7 @@ class CustomNavBar extends StatelessWidget {
           _buildNavItem(0, 'assets/icons/navbar-icon/home.png', 'Home', homeKey),
           _buildNavItem(1, 'assets/icons/navbar-icon/navigation.png', 'Navigation', navKey),
           _buildNavItem(2, 'assets/icons/navbar-icon/glasses.png', 'Devices', devicesKey),
+          _buildNavItem(3, 'assets/icons/navbar-icon/navigation.png', 'Chat', null), // Reused icon or placeholder
         ],
       ),
     );

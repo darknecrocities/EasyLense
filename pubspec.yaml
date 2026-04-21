@@ -34,6 +34,7 @@ dependencies:
   http: ^1.2.1
   path_provider: ^2.1.5
   google_mlkit_image_labeling: ^0.12.1
+  llama_flutter_android: ^0.1.2
 
 dev_dependencies:
   flutter_test:
@@ -70,6 +71,7 @@ flutter:
     - assets/models/mobilenet_v2_ssd_quant_int8.tflite
     - assets/models/labels.txt
     - assets/models/hazards_config.json
+    - assets/models/tinyllama.gguf
 
   fonts:
     - family: HeaderFont

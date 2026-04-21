@@ -12,6 +12,7 @@ import 'screens/onboarding/welcome_screen.dart';
 import 'screens/main/home_screen.dart';
 import 'providers/navigation_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'controllers/voice_command_controller.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -66,6 +67,7 @@ class EasyLensApp extends StatelessWidget {
         ),
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
         ChangeNotifierProvider(create: (_) => NavigationProvider()),
+        ChangeNotifierProvider(create: (_) => VoiceCommandController()),
       ],
       child: MaterialApp(
         title: 'EasyLens',

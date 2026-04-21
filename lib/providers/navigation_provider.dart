@@ -41,6 +41,16 @@ class NavigationProvider with ChangeNotifier {
   Destination? _activeDestination;
   Destination? get activeDestination => _activeDestination;
 
+  /// Tab indices: 0 (Dashboard), 1 (Map), 2 (Devices), 3 (AI Chat)
+  int _currentTabIndex = 0;
+  int get currentTabIndex => _currentTabIndex;
+
+  void setTabIndex(int index) {
+    if (index < 0 || index > 3) return;
+    _currentTabIndex = index;
+    notifyListeners();
+  }
+
   StreamSubscription<Position>? _positionStream;
 
   NavigationProvider() {

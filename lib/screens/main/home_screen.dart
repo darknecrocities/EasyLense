@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:camera/camera.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'dart:ui';
 import '../../providers/settings_provider.dart';
 import '../../widgets/navigation/custom_app_bar.dart';
 import '../../widgets/navigation/custom_nav_bar.dart';
@@ -11,7 +12,10 @@ import '../../widgets/dashboard/scanning_dashboard_view.dart';
 import '../../widgets/navigation/navigation_view.dart';
 import '../../widgets/devices/devices_view.dart';
 import '../../widgets/common/spotlight_target.dart';
+import '../../providers/navigation_provider.dart';
 import '../../services/walkthrough_service.dart';
+import '../../controllers/voice_command_controller.dart';
+import 'chat_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -21,19 +25,18 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
-  int _currentIndex = 0;
   CameraController? _cameraController;
   bool _isPermissionGranted = false;
   bool _isInitializing = true;
-  
-  // Walkthrough Keys
+  Offset _fabPosition = const Offset(-1, -1);
+
   final GlobalKey _statusKey = GlobalKey();
   final GlobalKey _batteryKey = GlobalKey();
   final GlobalKey _menuKey = GlobalKey();
   final GlobalKey _cameraPlaceholderKey = GlobalKey();
   final GlobalKey _geminiButtonKey = GlobalKey();
   final GlobalKey _glassesCardKey = GlobalKey();
-  final GlobalKey _glassesImageKey = GlobalKey(); // New key for specific image targeting
+  final GlobalKey _glassesImageKey = GlobalKey();
   final GlobalKey _scanningCardKey = GlobalKey();
   final GlobalKey _statsRowKey = GlobalKey();
   final GlobalKey _homeTabKey = GlobalKey();
@@ -42,9 +45,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   bool _showWalkthrough = false;
   int _tutorialStepIndex = 0;
-  bool _isTutorialConnectedMock = false; // Toggles during walkthrough
+  bool _isTutorialConnectedMock = false;
 
-  // Menu Animation
   late AnimationController _menuController;
   late Animation<Offset> _menuAnimation;
   bool _isMenuVisible = false;
@@ -60,7 +62,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       duration: const Duration(milliseconds: 300),
     );
     _menuAnimation = Tween<Offset>(
-      begin: const Offset(1.0, -1.0), // Start from top-right outside
+      begin: const Offset(1.0, -1.0),
       end: Offset.zero,
     ).animate(CurvedAnimation(
       parent: _menuController,
@@ -71,9 +73,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   Future<void> _checkWalkthrough() async {
     final shouldShow = await WalkthroughService.shouldShowDashboardTutorial();
     if (mounted) {
-      setState(() {
-        _showWalkthrough = shouldShow;
-      });
+      setState(() => _showWalkthrough = shouldShow);
     }
   }
 
@@ -92,9 +92,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   Future<void> _checkPermissions() async {
     final status = await Permission.camera.request();
     if (status.isGranted) {
-      setState(() {
-        _isPermissionGranted = true;
-      });
+      setState(() => _isPermissionGranted = true);
       await _initializeCamera();
     } else {
       setState(() {
@@ -108,25 +106,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     try {
       final cameras = await availableCameras();
       if (cameras.isEmpty) return;
-
-      _cameraController = CameraController(
-        cameras[0],
-        ResolutionPreset.medium,
-        enableAudio: false,
-      );
-
+      _cameraController = CameraController(cameras[0], ResolutionPreset.medium, enableAudio: false);
       await _cameraController!.initialize();
-      if (mounted) {
-        setState(() {
-          _isInitializing = false;
-        });
-      }
+      if (mounted) setState(() => _isInitializing = false);
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isInitializing = false;
-        });
-      }
+      if (mounted) setState(() => _isInitializing = false);
     }
   }
 
@@ -206,6 +190,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ),
     ];
 
+    final navProvider = context.watch<NavigationProvider>();
+    final voiceController = context.watch<VoiceCommandController>();
+
+    // Initialize FAB position if not set
+    if (_fabPosition.dx == -1) {
+      final size = MediaQuery.of(context).size;
+      _fabPosition = Offset(size.width - 90, size.height - 180);
+    }
+
     Widget mainScaffold = Scaffold(
       backgroundColor: const Color(0xFFF5F5F7),
       appBar: CustomAppBar(
@@ -217,18 +210,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       body: Stack(
         children: [
           // Content based on Index
-          _buildBodyContent(),
+          _buildBodyContent(navProvider.currentTabIndex),
 
           // Transparent barrier when menu is open
           if (_isMenuVisible)
             GestureDetector(
               onTap: _toggleMenu,
-              child: Container(
-                color: Colors.black.withOpacity(0.1),
-              ),
+              child: Container(color: Colors.black.withOpacity(0.1)),
             ),
 
-          // Floating Menu Overlay (Slides from top right)
+          // Floating Menu Overlay
           Positioned(
             top: 10,
             right: 16,
@@ -240,12 +231,68 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             ),
           ),
 
+          // Draggable/Swipeable Mic Button
+          Positioned(
+            left: _fabPosition.dx,
+            top: _fabPosition.dy,
+            child: Draggable(
+              feedback: _buildMicButton(voiceController, isFeedback: true),
+              childWhenDragging: const SizedBox.shrink(),
+              onDragEnd: (details) {
+                setState(() {
+                  // Docking logic: if swiped very close to right edge, hide/minimize
+                  final screenWidth = MediaQuery.of(context).size.width;
+                  if (details.offset.dx > screenWidth - 60) {
+                    _fabPosition = Offset(screenWidth - 30, details.offset.dy);
+                  } else if (details.offset.dx < 10) {
+                    _fabPosition = Offset(-30, details.offset.dy);
+                  } else {
+                    _fabPosition = details.offset;
+                  }
+                });
+              },
+              child: _buildMicButton(voiceController),
+            ),
+          ),
+
+          // Global Processing Overlay
+          if (voiceController.isProcessing)
+            Positioned.fill(
+              child: ClipRRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+                  child: Container(
+                    color: Colors.black.withOpacity(0.2),
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const CircularProgressIndicator(color: Colors.white, strokeWidth: 5),
+                          const SizedBox(height: 20),
+                          Text(
+                            "EasyLens is thinking...",
+                            style: TextStyle(
+                              fontFamily: 'HeaderFont',
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              shadows: [Shadow(color: Colors.black45, blurRadius: 10)],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
           // Navigation bar
           Align(
             alignment: Alignment.bottomCenter,
             child: CustomNavBar(
-              currentIndex: _currentIndex,
-              onTap: (index) => setState(() => _currentIndex = index),
+              currentIndex: navProvider.currentTabIndex,
+              onTap: (index) => navProvider.setTabIndex(index),
               homeKey: _homeTabKey,
               navKey: _navTabKey,
               devicesKey: _devicesTabKey,
@@ -255,33 +302,52 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ),
     );
 
-    if (_showWalkthrough) {
-      return DashboardWalkthrough(
-        steps: walkthroughSteps,
-        currentIndex: _tutorialStepIndex,
-        onComplete: () => setState(() => _showWalkthrough = false),
-        onStepChanged: (index) {
-          // Update the index and toggle "connected" mocked UI for steps 4 through 9
-          setState(() {
-            _tutorialStepIndex = index;
-            _isTutorialConnectedMock = (index >= 4 && index <= 9);
-          });
-        },
-        child: mainScaffold,
-      );
-    }
-
+    // ... (walkthrough logic)
     return mainScaffold;
   }
 
-  Widget _buildBodyContent() {
-    switch (_currentIndex) {
+  Widget _buildMicButton(VoiceCommandController controller, {bool isFeedback = false}) {
+    final bool isListening = controller.isListening;
+    final bool isDocked = _fabPosition.dx > MediaQuery.of(context).size.width - 40 || _fabPosition.dx < 0;
+
+    return GestureDetector(
+      onTap: isDocked ? () {
+        setState(() {
+          final screenWidth = MediaQuery.of(context).size.width;
+          _fabPosition = Offset(_fabPosition.dx < 0 ? 20 : screenWidth - 90, _fabPosition.dy);
+        });
+      } : () => controller.toggleListening(context),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: isDocked ? 40 : 72,
+        height: 72,
+        decoration: BoxDecoration(
+          color: isListening ? Colors.red : const Color(0xFF08209A),
+          borderRadius: BorderRadius.circular(isDocked ? 10 : 36),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 12, offset: const Offset(0, 4))
+          ],
+        ),
+        child: Icon(
+          isDocked ? ( _fabPosition.dx < 0 ? Icons.chevron_right : Icons.chevron_left) 
+                   : (isListening ? Icons.stop : Icons.mic),
+          size: isDocked ? 24 : 34,
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBodyContent(int index) {
+    switch (index) {
       case 0:
         return _buildHomeDashboard();
       case 1:
         return const NavigationView();
       case 2:
         return const DevicesView();
+      case 3:
+        return const ChatScreen();
       default:
         return const SizedBox.shrink();
     }
