@@ -45,7 +45,7 @@ class MlKitProcessor {
       _detector = ObjectDetector(options: detectorOptions);
 
       // 2. Base Image Labeling for specific semantic names
-      final labelerOptions = ImageLabelerOptions(confidenceThreshold: 0.6);
+      final labelerOptions = ImageLabelerOptions(confidenceThreshold: 0.5);
       _labeler = ImageLabeler(options: labelerOptions);
 
       _isReady = true;
@@ -54,6 +54,35 @@ class MlKitProcessor {
       print('[MLKit] Init failed: $e');
       _isReady = false;
     }
+  }
+
+  /// Categorize semantic image labels to align with broad object detection classes.
+  String? _matchSemanticLabelToCategory(String baseCategory, List<ImageLabel> semanticLabels, Set<String> usedLabels) {
+    final lowerBase = baseCategory.toLowerCase();
+    
+    // Define category mappings for smart stock label pairing
+    const Map<String, List<String>> categoryKeywords = {
+      'food': ['food', 'fruit', 'vegetable', 'apple', 'banana', 'pizza', 'sandwich', 'bread', 'cookie', 'cake', 'meal', 'supper', 'lunch'],
+      'fashion good': ['clothing', 'fashion', 'dress', 'shorts', 'jacket', 'coat', 'shoe', 'sneakers', 'hat', 'cap', 'beanie', 'scarf', 'jeans', 'denim', 'bag', 'handbag', 'glasses', 'sunglasses'],
+      'home good': ['home', 'house', 'chair', 'couch', 'table', 'desk', 'bed', 'sink', 'drawer', 'cabinetry', 'shelf', 'computer', 'laptop', 'television', 'tv', 'refrigerator', 'microwave', 'cup', 'bottle', 'clock', 'book', 'telephone', 'mobile phone'],
+      'plant': ['plant', 'flora', 'flower', 'flowerpot', 'garden', 'branch', 'twig', 'petal', 'tree', 'leaf', 'grass'],
+      'place': ['building', 'room', 'bathroom', 'kitchen', 'bedroom', 'office', 'classroom', 'hallway'],
+    };
+
+    final keywords = categoryKeywords[lowerBase] ?? [];
+    
+    for (final labelObj in semanticLabels) {
+      final labelText = labelObj.label.toLowerCase();
+      if (usedLabels.contains(labelText)) continue;
+
+      // Match if the label itself or any part matches the category keywords
+      bool matches = keywords.any((kw) => labelText.contains(kw) || kw.contains(labelText));
+      if (matches || lowerBase == 'object') {
+        usedLabels.add(labelText);
+        return labelObj.label;
+      }
+    }
+    return null;
   }
 
   /// Process a CameraImage and return ML Kit detections with specific labels.
@@ -69,7 +98,7 @@ class MlKitProcessor {
 
       // Run Image Labeling periodically to pull semantic labels from the visual scene
       _frameCount++;
-      if (_labeler != null && _frameCount % 5 == 0) {
+      if (_labeler != null && _frameCount % 4 == 0) {
         final labelInput = _convertCameraImage(image, sensorOrientation);
         if (labelInput != null) {
           _cachedLabels = await _labeler!.processImage(labelInput);
@@ -77,17 +106,15 @@ class MlKitProcessor {
       }
 
       // Filter out overly generic, "global", or abstract scene labels we don't want
-      final Set<String> ignoreLabels = {'place', 'musical instrument', 'event', 'leisure', 'sports', 'room'};
+      final Set<String> ignoreLabels = {'place', 'musical instrument', 'event', 'leisure', 'sports', 'room', 'interior design'};
       
       final validSemanticLabels = _cachedLabels.where((l) {
-        return !ignoreLabels.contains(l.label.toLowerCase());
+        return !ignoreLabels.contains(l.label.toLowerCase()) && l.confidence > 0.45;
       }).toList();
 
-      // Counter to assign a unique semantic label to each distinct bounding box
-      int semanticIndex = 0;
+      final Set<String> usedLabels = {};
 
       return objects.map((obj) {
-        // ML Kit ALREADY rotates bounding boxes to upright orientation
         final bool isRotated = sensorOrientation == 90 || sensorOrientation == 270;
         final double portraitW = isRotated ? image.height.toDouble() : image.width.toDouble();
         final double portraitH = isRotated ? image.width.toDouble() : image.height.toDouble();
@@ -102,9 +129,8 @@ class MlKitProcessor {
         double bestConf = 0.0;
         
         if (obj.labels.isNotEmpty) {
-          // Object detector assigns basic categories: Home Good, Fashion Good, Food, Place, Plant
           final text = MlKitLabelMap.fromText(obj.labels.first.text);
-          if (text.toLowerCase() != 'place') { // Remove 'Place' completely
+          if (text.toLowerCase() != 'place') { 
             baseLabelName = text;
             bestConf = obj.labels.first.confidence;
           }
@@ -112,33 +138,27 @@ class MlKitProcessor {
 
         String finalDisplayLabel = baseLabelName;
 
-        // 2nd Priority: Apply distinct specific Image Labeler tags to distinct objects
+        // 2nd Priority: Apply smart categorized semantic matching with stock image labeler results
         if (validSemanticLabels.isNotEmpty) {
-          final isGeneric = baseLabelName.toLowerCase() == 'home good' || 
-                            baseLabelName.toLowerCase() == 'fashion good' ||
-                            baseLabelName.toLowerCase() == 'food' ||
-                            baseLabelName.toLowerCase() == 'plant' ||
-                            baseLabelName == 'Object';
-          
-          if (isGeneric && semanticIndex < validSemanticLabels.length) {
-            // Assign a UNIQUE specific label to this specific bounding box
-            final specificLabel = validSemanticLabels[semanticIndex];
-            semanticIndex++; // Increment so the next object gets the next label
-
-            // Format: "Base Category - Specific Name" (e.g., "Home Good - Laptop")
-            // Ensure Person is prioritized directly
-            final sName = specificLabel.label;
-            if (sName.toLowerCase() == 'person') {
+          final matchedLabel = _matchSemanticLabelToCategory(baseLabelName, validSemanticLabels, usedLabels);
+          if (matchedLabel != null) {
+            final lowerMatched = matchedLabel.toLowerCase();
+            if (lowerMatched == 'person' || lowerMatched == 'man' || lowerMatched == 'woman' || lowerMatched == 'child') {
               finalDisplayLabel = 'Person';
+            } else if (baseLabelName == 'Object') {
+              finalDisplayLabel = matchedLabel;
             } else {
-              finalDisplayLabel = '$baseLabelName - $sName';
+              // E.g. "Home Good - Laptop"
+              finalDisplayLabel = '$baseLabelName - $matchedLabel';
             }
             
-            bestConf = specificLabel.confidence;
+            // Average confidences for stability
+            final labelConf = validSemanticLabels.firstWhere((l) => l.label == matchedLabel).confidence;
+            bestConf = bestConf > 0.0 ? (bestConf + labelConf) / 2.0 : labelConf;
           }
         }
 
-        // Final normalization to ensure capitalization is clean
+        // Clean formatting
         finalDisplayLabel = finalDisplayLabel.isNotEmpty 
           ? finalDisplayLabel[0].toUpperCase() + finalDisplayLabel.substring(1)
           : 'Object';

@@ -35,7 +35,14 @@ class _ChatScreenState extends State<ChatScreen> {
     });
     _scrollToBottom();
 
-    final response = await controller.generateResponseFromText(text);
+    final controller = Provider.of<VoiceCommandController>(context, listen: false);
+    
+    String response;
+    if (controller.isInitializing) {
+      response = "I am currently preparing my local brain model: ${controller.statusMessage}. Please try again shortly!";
+    } else {
+      response = await controller.generateResponseFromText(text);
+    }
 
     setState(() {
       _messages.add(ChatMessage(text: response, isUser: false));
@@ -57,6 +64,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final controller = context.watch<VoiceCommandController>();
+    final isInitializing = controller.isInitializing;
+
     return Column(
       children: [
         // Header
@@ -83,6 +93,38 @@ class _ChatScreenState extends State<ChatScreen> {
                   color: Colors.black.withOpacity(0.5),
                 ),
               ),
+              if (isInitializing) ...[
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF0F2F8),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.blueAccent.withOpacity(0.2)),
+                  ),
+                  child: Row(
+                    children: [
+                      const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF08209A)),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          controller.statusMessage,
+                          style: const TextStyle(
+                            fontFamily: 'DescriptionFont',
+                            fontSize: 12,
+                            color: Color(0xFF08209A),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ]
             ],
           ),
         ),
@@ -181,12 +223,5 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
       ),
     );
-  }
-}
-
-extension on VoiceCommandController {
-  Future<String> generateResponseLocally(String text) async {
-    // We'll add this method to VoiceCommandController for direct text chat
-    return "This is a placeholder response. Real LLM integration pending...";
   }
 }

@@ -71,7 +71,6 @@ flutter:
     - assets/models/mobilenet_v2_ssd_quant_int8.tflite
     - assets/models/labels.txt
     - assets/models/hazards_config.json
-    - assets/models/tinyllama.gguf
 
   fonts:
     - family: HeaderFont
